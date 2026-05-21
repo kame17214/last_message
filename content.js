@@ -4,12 +4,41 @@
   const USER_BUBBLE_SELECTOR = 'div[class*="user-message-bubble-color"]';
   const BUTTON_ID = "jump-my-last-btn";
   const HILITE_CLASS = "jump-my-last-hilite";
+  let currentOffset = -1;
+  let lastBubbleCount = 0;
 
   // ====== ユーティリティ ======
-  function getLastMyBubble() {
-    const bubbles = document.querySelectorAll(USER_BUBBLE_SELECTOR);
+  function getMyBubbles() {
+    return Array.from(document.querySelectorAll(USER_BUBBLE_SELECTOR));
+  }
+
+  function syncBubbleCount(bubbles) {
+    if (bubbles.length !== lastBubbleCount) {
+      currentOffset = -1;
+      lastBubbleCount = bubbles.length;
+    }
+  }
+
+  function getTargetMyBubble(direction) {
+    const bubbles = getMyBubbles();
     if (!bubbles.length) return null;
-    return bubbles[bubbles.length - 1];
+    syncBubbleCount(bubbles);
+
+    if (direction === "newer") {
+      if (currentOffset <= 0) {
+        currentOffset = 0;
+        toast("Newest user message");
+      } else {
+        currentOffset -= 1;
+      }
+    } else if (currentOffset < bubbles.length - 1) {
+      currentOffset += 1;
+    } else {
+      toast("Oldest user message");
+    }
+
+    const targetIndex = Math.max(0, bubbles.length - 1 - currentOffset);
+    return bubbles[targetIndex];
   }
 
   function scrollToEl(el) {
@@ -21,8 +50,8 @@
     window.setTimeout(() => el.classList.remove(HILITE_CLASS), 900);
   }
 
-  function jump() {
-    const el = getLastMyBubble();
+  function jump(direction = "older") {
+    const el = getTargetMyBubble(direction);
     if (!el) {
       toast("No user message found yet");
       return;
@@ -32,10 +61,10 @@
   }
 
   // ====== ショートカット ======
-  function hotkeyMatch(e) {
+  function hotkeyMatch(e, shift) {
     if (!!e.altKey !== HOTKEY.alt) return false;
     if (!!e.ctrlKey !== HOTKEY.ctrl) return false;
-    if (!!e.shiftKey !== HOTKEY.shift) return false;
+    if (!!e.shiftKey !== shift) return false;
     return (e.key || "").toLowerCase() === HOTKEY.key;
   }
 
@@ -44,10 +73,14 @@
     // const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
     // if (tag === "textarea" || tag === "input" || e.target?.isContentEditable) return;
 
-    if (hotkeyMatch(e)) {
+    if (hotkeyMatch(e, false)) {
       e.preventDefault();
       e.stopPropagation();
-      jump();
+      jump("older");
+    } else if (hotkeyMatch(e, true)) {
+      e.preventDefault();
+      e.stopPropagation();
+      jump("newer");
     }
   }, true);
 
@@ -62,7 +95,9 @@
         right: 18px;
         bottom: 18px;
         z-index: 999999;
-        padding: 10px 12px;
+        display: flex;
+        gap: 4px;
+        padding: 4px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.18);
         background: rgba(20,20,20,0.35);
@@ -70,11 +105,24 @@
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
         font: 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        cursor: pointer;
+        cursor: grab;
         user-select: none;
       }
       #${BUTTON_ID}:hover { background: rgba(20,20,20,0.50); }
-      #${BUTTON_ID}:active { transform: translateY(1px); }
+      #${BUTTON_ID}:active { cursor: grabbing; transform: translateY(1px); }
+      #${BUTTON_ID} .jump-my-last-action {
+        min-width: 34px;
+        height: 28px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: rgba(255,255,255,0.92);
+        font: inherit;
+        cursor: pointer;
+      }
+      #${BUTTON_ID} .jump-my-last-action:hover {
+        background: rgba(255,255,255,0.12);
+      }
 
       .${HILITE_CLASS} {
         outline: 2px solid rgba(255,255,255,0.55);
@@ -109,10 +157,29 @@
 
     const btn = document.createElement("div");
     btn.id = BUTTON_ID;
-    btn.textContent = "↩︎ My last  (Alt+L)";
-    btn.title = "Jump to your last message (Alt+L)\nDrag to move";
+    btn.title = "Drag to move";
 
-    btn.addEventListener("click", jump);
+    const olderBtn = document.createElement("button");
+    olderBtn.type = "button";
+    olderBtn.className = "jump-my-last-action";
+    olderBtn.textContent = "<";
+    olderBtn.title = "Older user message (Alt+L)";
+    olderBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      jump("older");
+    });
+
+    const newerBtn = document.createElement("button");
+    newerBtn.type = "button";
+    newerBtn.className = "jump-my-last-action";
+    newerBtn.textContent = ">";
+    newerBtn.title = "Newer user message (Alt+Shift+L)";
+    newerBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      jump("newer");
+    });
+
+    btn.append(olderBtn, newerBtn);
 
     // ドラッグ移動（雑に強い実装）
     let dragging = false;
@@ -120,6 +187,7 @@
     let startRight = 0, startBottom = 0;
 
     btn.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".jump-my-last-action")) return;
       dragging = true;
       btn.setPointerCapture(e.pointerId);
       startX = e.clientX;
