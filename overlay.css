@@ -1,0 +1,59 @@
+#lmmo-root {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: rgba(20, 20, 20, 0.92);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  z-index: 999999;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+#lmmo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+#lmmo-body {
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+#lmmo-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.lmmo-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.lmmo-btn:hover {
+  background: rgba(255,255,255,0.10);
+}
+
+#lmmo-root.lmmo-hidden {
+  display: none;
+}

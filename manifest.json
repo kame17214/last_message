@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Jump to My Last (ChatGPT)",
+  "version": "0.1.1",
+  "description": "Floating button + Alt+L to jump to your last user message on chatgpt.com",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "jump-my-last@example.com",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+}
+}
