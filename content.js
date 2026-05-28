@@ -4,41 +4,45 @@
   const USER_BUBBLE_SELECTOR = 'div[class*="user-message-bubble-color"]';
   const BUTTON_ID = "jump-my-last-btn";
   const HILITE_CLASS = "jump-my-last-hilite";
-  let currentOffset = -1;
-  let lastBubbleCount = 0;
+  const SCAN_RETRIES = 8;
+  const SCAN_DELAY_MS = 120;
+  const SCROLL_STEP_RATIO = 0.75;
+  let activeBubble = null;
 
   // ====== ユーティリティ ======
   function getMyBubbles() {
     return Array.from(document.querySelectorAll(USER_BUBBLE_SELECTOR));
   }
 
-  function syncBubbleCount(bubbles) {
-    if (bubbles.length !== lastBubbleCount) {
-      currentOffset = -1;
-      lastBubbleCount = bubbles.length;
-    }
+  function midpoint(el) {
+    const rect = el.getBoundingClientRect();
+    return (rect.top + rect.bottom) / 2;
   }
 
   function getTargetMyBubble(direction) {
     const bubbles = getMyBubbles();
     if (!bubbles.length) return null;
-    syncBubbleCount(bubbles);
 
-    if (direction === "newer") {
-      if (currentOffset <= 0) {
-        currentOffset = 0;
-        toast("Newest user message");
-      } else {
-        currentOffset -= 1;
-      }
-    } else if (currentOffset < bubbles.length - 1) {
-      currentOffset += 1;
-    } else {
-      toast("Oldest user message");
+    if (!activeBubble) {
+      return direction === "newer" ? bubbles[0] : bubbles[bubbles.length - 1];
     }
 
-    const targetIndex = Math.max(0, bubbles.length - 1 - currentOffset);
-    return bubbles[targetIndex];
+    const activeIndex = bubbles.indexOf(activeBubble);
+    if (activeIndex !== -1) {
+      const nextIndex = direction === "newer" ? activeIndex + 1 : activeIndex - 1;
+      return bubbles[nextIndex] || null;
+    }
+
+    const reference = window.innerHeight / 2;
+    if (direction === "newer") {
+      return bubbles
+        .filter((bubble) => midpoint(bubble) > reference + 4)
+        .sort((a, b) => midpoint(a) - midpoint(b))[0] || null;
+    }
+
+    return bubbles
+      .filter((bubble) => midpoint(bubble) < reference - 4)
+      .sort((a, b) => midpoint(b) - midpoint(a))[0] || null;
   }
 
   function scrollToEl(el) {
@@ -50,12 +54,28 @@
     window.setTimeout(() => el.classList.remove(HILITE_CLASS), 900);
   }
 
-  function jump(direction = "older") {
-    const el = getTargetMyBubble(direction);
-    if (!el) {
-      toast("No user message found yet");
+  function scanForMore(direction, retry) {
+    if (retry >= SCAN_RETRIES) {
+      toast(direction === "newer" ? "Newest user message" : "Oldest user message");
       return;
     }
+
+    const dy = window.innerHeight * SCROLL_STEP_RATIO * (direction === "newer" ? 1 : -1);
+    window.scrollBy({ top: dy, behavior: "smooth" });
+    window.setTimeout(() => jump(direction, retry + 1), SCAN_DELAY_MS);
+  }
+
+  function jump(direction = "older", retry = 0) {
+    const el = getTargetMyBubble(direction);
+    if (!el) {
+      if (!getMyBubbles().length) {
+        toast("No user message found yet");
+        return;
+      }
+      scanForMore(direction, retry);
+      return;
+    }
+    activeBubble = el;
     scrollToEl(el);
     highlight(el);
   }

@@ -111,6 +111,7 @@ function createHarness() {
     innerHeight: 800,
     setTimeout,
     clearTimeout,
+    scrollBy() {},
   };
 
   const sandbox = {
@@ -172,17 +173,17 @@ test("Alt+L walks backward through user messages and Alt+Shift+L walks forward",
   assert.equal(FakeElement.lastScrolled, "message-3");
 });
 
-test("jump position resets when a new user message appears", () => {
+test("keeps the current position stable when more messages enter the DOM", () => {
   const { bubbles, press } = createHarness();
 
   press();
   press();
   assert.equal(FakeElement.lastScrolled, "message-2");
 
-  bubbles.push(new FakeElement("div", "message-4"));
+  bubbles.unshift(new FakeElement("div", "message-0"));
   press();
 
-  assert.equal(FakeElement.lastScrolled, "message-4");
+  assert.equal(FakeElement.lastScrolled, "message-1");
 });
 
 test("floating buttons trigger older and newer jumps", () => {
