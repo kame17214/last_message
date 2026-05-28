@@ -14,6 +14,30 @@
     return Array.from(document.querySelectorAll(USER_BUBBLE_SELECTOR));
   }
 
+  function getScrollRoot() {
+    const bubbles = getMyBubbles();
+    let el = activeBubble || bubbles[0] || document.body;
+
+    while (el && el !== document.body) {
+      const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+      const overflowY = style ? style.overflowY : "";
+      const canScroll = /(auto|scroll)/.test(overflowY) && el.scrollHeight > el.clientHeight;
+      if (canScroll) return el;
+      el = el.parentElement;
+    }
+
+    return document.scrollingElement || document.documentElement || document.body;
+  }
+
+  function scrollRootBy(top) {
+    const root = getScrollRoot();
+    if (root && typeof root.scrollBy === "function") {
+      root.scrollBy({ top, behavior: "smooth" });
+      return;
+    }
+    window.scrollBy({ top, behavior: "smooth" });
+  }
+
   function midpoint(el) {
     const rect = el.getBoundingClientRect();
     return (rect.top + rect.bottom) / 2;
@@ -61,7 +85,7 @@
     }
 
     const dy = window.innerHeight * SCROLL_STEP_RATIO * (direction === "newer" ? 1 : -1);
-    window.scrollBy({ top: dy, behavior: "smooth" });
+    scrollRootBy(dy);
     window.setTimeout(() => jump(direction, retry + 1), SCAN_DELAY_MS);
   }
 

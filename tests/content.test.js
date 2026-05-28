@@ -32,10 +32,15 @@ class FakeElement {
     this.title = "";
     this.type = "";
     this.className = "";
+    this.parentElement = null;
+    this.scrollHeight = 0;
+    this.clientHeight = 0;
+    this.scrollCalls = [];
   }
 
   appendChild(child) {
     this.children.push(child);
+    child.parentElement = this;
     return child;
   }
 
@@ -65,6 +70,10 @@ class FakeElement {
     FakeElement.lastScrolled = this.name;
   }
 
+  scrollBy(options) {
+    this.scrollCalls.push(options);
+  }
+
   click() {
     const event = {
       target: this,
@@ -78,17 +87,28 @@ class FakeElement {
 }
 
 function createHarness() {
+  const scrollRoot = new FakeElement("main", "scroll-root");
+  scrollRoot.style.overflowY = "auto";
+  scrollRoot.scrollHeight = 2400;
+  scrollRoot.clientHeight = 800;
+
   const bubbles = [
     new FakeElement("div", "message-1"),
     new FakeElement("div", "message-2"),
     new FakeElement("div", "message-3"),
   ];
+  bubbles.forEach((bubble) => {
+    bubble.parentElement = scrollRoot;
+  });
   const allElements = [];
   const listeners = new Map();
+  let windowScrollCalls = 0;
 
   const document = {
     head: new FakeElement("head"),
     body: new FakeElement("body"),
+    documentElement: new FakeElement("html"),
+    scrollingElement: scrollRoot,
     createElement(tagName) {
       const el = new FakeElement(tagName);
       allElements.push(el);
@@ -109,9 +129,14 @@ function createHarness() {
   const window = {
     innerWidth: 1200,
     innerHeight: 800,
+    getComputedStyle(el) {
+      return el.style;
+    },
     setTimeout,
     clearTimeout,
-    scrollBy() {},
+    scrollBy() {
+      windowScrollCalls += 1;
+    },
   };
 
   const sandbox = {
@@ -145,7 +170,7 @@ function createHarness() {
     return allElements.find((el) => el.title === title);
   }
 
-  return { bubbles, press, actionButton };
+  return { bubbles, press, actionButton, scrollRoot, getWindowScrollCalls: () => windowScrollCalls };
 }
 
 test("Alt+L walks backward through user messages and Alt+Shift+L walks forward", () => {
@@ -202,4 +227,19 @@ test("floating buttons trigger older and newer jumps", () => {
 
   newerButton.click();
   assert.equal(FakeElement.lastScrolled, "message-3");
+});
+
+test("scans by scrolling the nearest scroll container when no adjacent bubble is loaded", () => {
+  const { bubbles, press, scrollRoot, getWindowScrollCalls } = createHarness();
+
+  press();
+  press();
+  press();
+  bubbles.shift();
+
+  press();
+
+  assert.equal(scrollRoot.scrollCalls.length, 1);
+  assert.equal(scrollRoot.scrollCalls[0].top, -600);
+  assert.equal(getWindowScrollCalls(), 0);
 });
