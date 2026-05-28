@@ -4,6 +4,7 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
+const USER_MESSAGE_SELECTOR = '[data-message-author-role="user"]';
 const USER_BUBBLE_SELECTOR = 'div[class*="user-message-bubble-color"]';
 
 class FakeClassList {
@@ -32,10 +33,15 @@ class FakeElement {
     this.title = "";
     this.type = "";
     this.className = "";
+    this.attributes = {};
     this.parentElement = null;
     this.scrollHeight = 0;
     this.clientHeight = 0;
     this.scrollCalls = [];
+  }
+
+  setAttribute(name, value) {
+    this.attributes[name] = value;
   }
 
   appendChild(child) {
@@ -98,6 +104,9 @@ function createHarness() {
     new FakeElement("div", "message-3"),
   ];
   bubbles.forEach((bubble) => {
+    bubble.setAttribute("data-message-author-role", "user");
+  });
+  bubbles.forEach((bubble) => {
     bubble.parentElement = scrollRoot;
   });
   const allElements = [];
@@ -118,6 +127,7 @@ function createHarness() {
       return allElements.find((el) => el.id === id) || null;
     },
     querySelectorAll(selector) {
+      if (selector === USER_MESSAGE_SELECTOR) return bubbles;
       return selector === USER_BUBBLE_SELECTOR ? bubbles : [];
     },
     addEventListener(type, handler) {
@@ -205,7 +215,9 @@ test("keeps the current position stable when more messages enter the DOM", () =>
   press();
   assert.equal(FakeElement.lastScrolled, "message-2");
 
-  bubbles.unshift(new FakeElement("div", "message-0"));
+  const olderBubble = new FakeElement("div", "message-0");
+  olderBubble.setAttribute("data-message-author-role", "user");
+  bubbles.unshift(olderBubble);
   press();
 
   assert.equal(FakeElement.lastScrolled, "message-1");

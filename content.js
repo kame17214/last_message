@@ -1,6 +1,7 @@
 (() => {
   // ====== 設定 ======
   const HOTKEY = { alt: true, ctrl: false, shift: false, key: "l" }; // Alt+L
+  const USER_MESSAGE_SELECTOR = '[data-message-author-role="user"]';
   const USER_BUBBLE_SELECTOR = 'div[class*="user-message-bubble-color"]';
   const BUTTON_ID = "jump-my-last-btn";
   const HILITE_CLASS = "jump-my-last-hilite";
@@ -11,6 +12,8 @@
 
   // ====== ユーティリティ ======
   function getMyBubbles() {
+    const messages = Array.from(document.querySelectorAll(USER_MESSAGE_SELECTOR));
+    if (messages.length) return messages;
     return Array.from(document.querySelectorAll(USER_BUBBLE_SELECTOR));
   }
 
